@@ -2,12 +2,13 @@ import streamlit as st
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, FFMpegWriter
+from matplotlib.animation import FuncAnimation, PillowWriter
 from queue import PriorityQueue
 from tempfile import NamedTemporaryFile
+from PIL import Image
 import itertools
 
-# ---------------- CONFIG -------------------
+# --- Configuration ---
 DEFAULT_GRID   = 20
 DEFAULT_TREES  = 0.15
 DEFAULT_ROCKS  = 0.08
@@ -16,19 +17,6 @@ FPS            = 4
 DOG_IMG        = "dog.png"
 GOAL_IMG       = "goal.png"
 
-# ---------------- UI SETUP ------------------
-st.set_page_config("Find Minnie", layout="centered")
-st.markdown("""
-    <style>
-        [data-testid="stSidebar"][aria-expanded="false"] {
-            width: 300px;
-            margin-left: 0;
-        }
-    </style>
-""", unsafe_allow_html=True)
-st.title("🐶 Find Minnie's Lap – Interactive A* Algorithm Path Demo")
-
-# ---------------- IMAGE LOADER ----------------
 @st.cache_data
 def load_rgba(path: str, size: int) -> np.ndarray:
     img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
@@ -50,7 +38,7 @@ def overlay_rgba(base, overlay, x, y):
     alpha = overlay[..., 3:] / 255.0
     roi[:] = (overlay[..., :3] * alpha + roi * (1 - alpha)).astype(np.uint8)
 
-# ---------------- A* SEARCH -------------------
+# --- A* ---
 def heuristic(a, b): return abs(a[0]-b[0]) + abs(a[1]-b[1])
 
 def astar(grid, start, goal):
@@ -73,7 +61,7 @@ def astar(grid, start, goal):
                     pq.put((tentative + heuristic((nx,ny), goal), (nx,ny)))
     return None
 
-# ---------------- MAP GENERATOR ----------------
+# --- Map ---
 def make_grass_tile(size, jitter=12):
     h = 60 + np.random.randint(-jitter,jitter,(size,size))
     s = 180 + np.random.randint(-30,30,(size,size))
@@ -92,44 +80,45 @@ def generate_grid_with_path(n, tree_ratio, rock_ratio):
         for _ in range(2):
             col = np.random.randint(4,n-4); gap = np.random.randint(2,n-2)
             for r in range(n):
-                if r != gap: grid[r,col] = 1
+                if r!=gap: grid[r,col]=1
         grid[0,0]=grid[-1,-1]=0
         path = astar(grid,(0,0),(n-1,n-1))
-        if path: return grid, path
-    return None, None
+        if path: return grid,path
+    return None,None
 
-# ---------------- FRAME RENDERER ----------------
+# --- Frame drawing ---
 def draw_frame(grid, path_segment, obstacle_types, cell=CELL_SIZE):
     n = grid.shape[0]
     grass = make_grass_tile(cell)
     frame = np.zeros((n*cell, n*cell, 3), np.uint8)
-
     for r,c in itertools.product(range(n), range(n)):
         frame[r*cell:(r+1)*cell, c*cell:(c+1)*cell] = grass
-    
     for r,c in itertools.product(range(n), range(n)):
         if grid[r,c]:
             if obstacle_types[r,c] < .75:
-                cv2.circle(frame,(c*cell+cell//2,r*cell+cell//2), cell//2-2, (0,70,0), -1)
+                cv2.circle(frame,(c*cell+cell//2,r*cell+cell//2),
+                           cell//2-2,(0,70,0),-1)
             else:
-                cv2.rectangle(frame,(c*cell+2,r*cell+2), ((c+1)*cell-2,(r+1)*cell-2), (105,105,105), -1)
-
+                cv2.rectangle(frame,(c*cell+2,r*cell+2),
+                              ((c+1)*cell-2,(r+1)*cell-2),(105,105,105),-1)
     for r,c in path_segment:
-        cv2.rectangle(frame,(c*cell,r*cell), ((c+1)*cell-1,(r+1)*cell-1), (180,255,180), -1)
-
+        cv2.rectangle(frame,(c*cell,r*cell),
+                      ((c+1)*cell-1,(r+1)*cell-1),(180,255,180),-1)
     overlay_rgba(frame, goal_icon, (n-1)*cell, (n-1)*cell)
     dog_r, dog_c = path_segment[-1]
     overlay_rgba(frame, dog_icon, dog_c*cell, dog_r*cell)
     return frame
 
-# ---------------- SIDEBAR INPUT ----------------
+# --- UI ---
+st.set_page_config("Find Minnie", layout="centered")
+st.title("🐶 Finding Princess Minnie's Lap – An Interactive A* Algorithm Path Demo. Please click on the double arrows on the top left corner to access the sliders.")
+
 with st.sidebar:
     st.header("Map Parameters")
-    N       = st.slider("Grid size (N×N)", 10, 40, DEFAULT_GRID)
-    T_RATIO = st.slider("Tree density",    0.00, 0.40, DEFAULT_TREES, 0.01)
-    R_RATIO = st.slider("Rock density",    0.00, 0.40, DEFAULT_ROCKS, 0.01)
+    N      = st.slider("Grid size (N×N)", 10, 40, DEFAULT_GRID )
+    T_RATIO = st.slider("Tree density",  0.00, 0.40, DEFAULT_TREES, 0.01 )
+    R_RATIO = st.slider("Rock density",  0.00, 0.40, DEFAULT_ROCKS, 0.01 )
 
-# ---------------- MAIN BUTTON ----------------
 if st.button("Generate New Map & Solve"):
     grid, path = generate_grid_with_path(N, T_RATIO, R_RATIO)
     if path is None:
@@ -137,11 +126,11 @@ if st.button("Generate New Map & Solve"):
         st.stop()
 
     obstacle_types = np.random.rand(N, N)
+
     frame = draw_frame(grid, path, obstacle_types, CELL_SIZE)
     st.image(frame, caption=f"Path length: {len(path)-1} steps", channels="BGR")
 
-    # --- Generate MP4 ---
-    prog = st.progress(0, "Rendering animation …")
+    prog = st.progress(0, "Rendering GIF …")
     fig, ax = plt.subplots(figsize=(6,6)); plt.axis("off")
 
     def draw(step):
@@ -150,16 +139,14 @@ if st.button("Generate New Map & Solve"):
         ax.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
     anim = FuncAnimation(fig, draw, frames=len(path), interval=600)
-    with NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
-        writer = FFMpegWriter(fps=FPS)
-        anim.save(tmp.name, writer=writer)
+    with NamedTemporaryFile(suffix=".gif", delete=False) as tmp:
+        anim.save(tmp.name, writer=PillowWriter(fps=FPS))
         prog.progress(100, "Done!")
-        st.video(tmp.name)
-        st.download_button("Download MP4", open(tmp.name,"rb").read(),
-                           file_name="find_minnie.mp4", mime="video/mp4")
-
+        st.image(tmp.name)
+        st.download_button("Download GIF", open(tmp.name,"rb").read(),
+                           file_name="find_minnie.gif", mime="image/gif")
 else:
-    st.info("Click **Generate New Map & Solve** to start.")
+    st.info("Click **Generate New Map & Solve** to create a maze.")
 
 
 
