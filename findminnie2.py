@@ -7,7 +7,8 @@ from queue import PriorityQueue
 from tempfile import NamedTemporaryFile
 import itertools
 import pathlib
-
+import base64
+import streamlit.components.v1 as components
 # ---------------- CONFIG -----------------
 DEFAULT_GRID   = 20
 DEFAULT_TREES  = 0.15
@@ -16,7 +17,7 @@ CELL_SIZE      = 32
 FPS            = 4
 DOG_IMG        = "dog.png"
 GOAL_IMG       = "goal.png"
-BARK_FILE      = "bark.mp3"     # add your bark MP3 here
+BARK_FILE      = "tune.mp3"     # add your bark MP3 here
 
 # ---------------- IMAGE LOADER -----------
 @st.cache_data
@@ -110,7 +111,20 @@ st.markdown("""
 [data-testid="stSidebar"][aria-expanded="false"]{width:300px;margin-left:0;}
 </style>
 """, unsafe_allow_html=True)
-st.title("🐶 Finding Princess Minnie's Lap – Interactive A* Demo")
+st.title("🐶 Finding Princess Minnie's Lap – An Interactive A* Algorithm Demo")
+st.markdown("""
+### 🔧 How to Use:
+1. Use the sliders in the sidebar (click **≫** in the top-left if it's hidden).
+2. Select the values of the map size, the density of obstacles such as trees and rocks. 
+3. The A* algorithm will always find a path if it exists. If such a path doesn't exist, you'll be requested to lower either the map density or the densities of obstacles. 
+4. Click **Generate New Map & Solve** to create a map and see the puppy find Princess Minnie.
+5. A GIF animation will be shown automatically.
+6. Turn on your audio.
+7. You can also download the animation by clicking **Download GIF**.
+
+Enjoy the adventure! 🐾
+""")
+
 
 with st.sidebar:
     st.header("Map Parameters")
@@ -144,9 +158,15 @@ if st.button("Generate New Map & Solve"):
 
     # ---------- Bark sound ---------------
     if pathlib.Path(BARK_FILE).is_file():
-        st.audio(open(BARK_FILE,"rb").read(),format="audio/mp3")
+        b64_audio = base64.b64encode(open(BARK_FILE, "rb").read()).decode()
+        components.html(f"""
+            <audio autoplay>
+                <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
+            </audio>
+        """, height=0)
     else:
         st.info("🔈 Add a bark.mp3 file to play a woof when Minnie is found!")
+
 else:
     st.info("Click **Generate New Map & Solve** to create a maze.")
 
