@@ -153,7 +153,10 @@ if st.button("Generate New Map & Solve"):
 
         anim = FuncAnimation(fig, draw, frames=len(path), interval=600)
         with NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
-            anim.save(tmp.name, writer="ffmpeg", fps=FPS)
+         #   anim.save(tmp.name, writer="ffmpeg", fps=FPS)
+            from matplotlib.animation import FFMpegWriter
+	    writer = FFMpegWriter(fps=FPS)
+	    anim.save(tmp.name, writer=writer)
             prog.progress(100, "Done!")
             st.video(tmp.name)
             st.download_button("Download MP4", open(tmp.name,"rb").read(),
