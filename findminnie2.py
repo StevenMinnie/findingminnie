@@ -2,11 +2,12 @@ import streamlit as st
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 from queue import PriorityQueue
 from tempfile import NamedTemporaryFile
 from PIL import Image
 import itertools
+
 
 
 DEFAULT_GRID   = 20
@@ -154,7 +155,6 @@ if st.button("Generate New Map & Solve"):
         anim = FuncAnimation(fig, draw, frames=len(path), interval=600)
         with NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
          #   anim.save(tmp.name, writer="ffmpeg", fps=FPS)
-            from matplotlib.animation import FFMpegWriter
 	    writer = FFMpegWriter(fps=FPS)
 	    anim.save(tmp.name, writer=writer)
             prog.progress(100, "Done!")
