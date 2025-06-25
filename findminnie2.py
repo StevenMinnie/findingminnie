@@ -91,7 +91,7 @@ st.markdown("""
 **Note:** If an algorithm fails to find a path, either try a different one or regenerate the map with lower grid size or obstacle densities. You will know a particular algorithm has failed when you generate a new map and it is taking a long time to load it on the screen. 
 
 Enjoy the adventure! 🐾
-- Created By Minnie's Puppy
+Created By Minnie's Puppy
 """)
 
 with st.sidebar:
