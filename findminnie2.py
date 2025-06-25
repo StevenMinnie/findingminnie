@@ -75,7 +75,7 @@ def frame(g, seg, obs):
 
 st.set_page_config("Find Minnie", layout="centered")
 st.markdown('<style>[data-testid="stSidebar"][aria-expanded="false"]{width:300px;margin-left:0}</style>', unsafe_allow_html=True)
-st.title("🐶 Finding Princess Minnie's Lap – An Interactive Pathfinding Demo")
+st.title("🐶 Finding Princess Minnie's Lap – An Interactive Path-Finding Demo")
 
 
 st.markdown("""
